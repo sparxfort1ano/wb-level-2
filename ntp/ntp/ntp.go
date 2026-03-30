@@ -1,3 +1,0 @@
-// Package ntp ...
-package ntp
-
