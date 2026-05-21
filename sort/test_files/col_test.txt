@@ -1,0 +1,3 @@
+apple	100	zulu
+banana	1000	xray
+mango	200	yankee
