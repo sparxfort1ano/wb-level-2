@@ -1,0 +1,7 @@
+[00:01] initialization
+[00:02] processing data...
+[00:03] warning: low memory
+[00:04] processing data...
+[00:05] critical error: nil pointer
+[00:06] shutting down
+[00:07] success
