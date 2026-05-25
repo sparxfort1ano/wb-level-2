@@ -1,0 +1,6 @@
+ID	Name	Role	City	Age
+1	Alice	Admin	Moscow	25
+2	Bob	User	Kazan
+3	Charlie	Manager	Ufa	30
+Just a regular string without any tabs
+4	Dave	User	Sochi	22
