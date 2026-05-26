@@ -41,7 +41,9 @@ func main() {
 func or1(channels ...<-chan interface{}) <-chan interface{} {
 	switch len(channels) {
 	case 0:
-		return nil
+		ch := make(chan interface{})
+		close(ch)
+		return ch
 	case 1:
 		return channels[0]
 	}
@@ -75,7 +77,9 @@ func or1(channels ...<-chan interface{}) <-chan interface{} {
 func or2(channels ...<-chan interface{}) <-chan interface{} {
 	switch len(channels) {
 	case 0:
-		return nil
+		ch := make(chan interface{})
+		close(ch)
+		return ch
 	case 1:
 		return channels[0]
 	}
