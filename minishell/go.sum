@@ -1,0 +1,4 @@
+github.com/tklauser/ps v0.0.4 h1:RPqSIVp5DaxTSsrLR73F3ueyPvakoMuAAXJBhcfcRAE=
+github.com/tklauser/ps v0.0.4/go.mod h1:gVernADnTiWoAD61pzuD8KqFDGFSZdi0U8CaUBeATMM=
+golang.org/x/sys v0.44.0 h1:ildZl3J4uzeKP07r2F++Op7E9B29JRUy+a27EibtBTQ=
+golang.org/x/sys v0.44.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
