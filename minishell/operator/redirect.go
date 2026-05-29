@@ -1,13 +1,18 @@
+// Package operator provides parsing utilities for logical operators
+// and i/o redirections.
 package operator
 
 import "strings"
 
+// RedirectOptions holds the parsed file paths for input and output
+// redirections along with the trimmed command string ready for execution.
 type RedirectOptions struct {
 	CmdLine    string
 	InputFile  string
 	OutputFile string
 }
 
+// NewRedirectOptions creates a new instance of RedirectOptions.
 func NewRedirectOptions(
 	cmdLine string,
 	inputFile string,
@@ -20,6 +25,8 @@ func NewRedirectOptions(
 	}
 }
 
+// ParseRedirect extracts input and output file redirections from
+// the given command line.
 func ParseRedirect(line string) *RedirectOptions {
 	var (
 		cmdLine, outputFile, inputFile string

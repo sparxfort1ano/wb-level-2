@@ -7,6 +7,8 @@ import (
 
 var prevPWD string
 
+// ChangeDirectory updates the current working directory of the shell process.
+// It also supports `~`, `-` arguments.
 func ChangeDirectory(args []string) error {
 	var dir string
 	if len(args) == 1 || (len(args) == 2 && args[1] == "~") {

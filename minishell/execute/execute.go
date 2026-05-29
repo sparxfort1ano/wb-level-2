@@ -1,37 +1,51 @@
+// Package execute provides the core execution engine for minishell.
+// It handles i/o stream management, environment variable expansion,
+// file redirections and commands routing (external, internal).
 package execute
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/sparxfort1ano/wb-level-2/minishell/command"
 	"github.com/sparxfort1ano/wb-level-2/minishell/operator"
 )
 
+// Streams encapsulates the default shell input, output and error streams.
 type Streams struct {
 	InputStream  io.Reader
 	OutputStream io.Writer
 	ErrorStream  io.Writer
 }
 
-func NewStreams() *Streams {
+// NewStreams creates a new instance of Streams.
+func NewStreams(
+	inputStream io.Reader,
+	outputStream io.Writer,
+	errorStream io.Writer,
+) *Streams {
 	return &Streams{
-		InputStream:  os.Stdin,
-		OutputStream: os.Stdout,
-		ErrorStream:  os.Stderr,
+		InputStream:  inputStream,
+		OutputStream: outputStream,
+		ErrorStream:  errorStream,
 	}
 }
 
-func (s *Streams) executeExternalCommand(args []string, redirOpts *operator.RedirectOptions) error {
-	path, err := exec.LookPath(args[0])
-	if err != nil {
-		return fmt.Errorf("command not found: %w", err)
-	}
+// executeNode processes and runs a single command within the shell.
+// It expands environment variables actions, takes i/o redirection parsing,
+// routes the command to appropriate executor (internal, external).
+func (s *Streams) executeNode(line string, defaultOut io.Writer, defaultIn io.Reader) error {
+	line = os.ExpandEnv(line)
 
-	cmd := exec.Command(path, args[1:]...)
+	redirOpts := operator.ParseRedirect(line)
+
+	inStream := defaultIn
+	outStream := defaultOut
+	errStream := s.ErrorStream
 
 	if redirOpts.InputFile != "" {
 		file, err := os.Open(redirOpts.InputFile)
@@ -39,9 +53,7 @@ func (s *Streams) executeExternalCommand(args []string, redirOpts *operator.Redi
 			return fmt.Errorf("open file error")
 		}
 		defer file.Close()
-		cmd.Stdin = file
-	} else {
-		cmd.Stdin = s.InputStream
+		inStream = file
 	}
 
 	if redirOpts.OutputFile != "" {
@@ -50,25 +62,23 @@ func (s *Streams) executeExternalCommand(args []string, redirOpts *operator.Redi
 			return fmt.Errorf("create file error")
 		}
 		defer file.Close()
-		cmd.Stdout = file
-	} else {
-		cmd.Stdout = s.OutputStream
-	}
-	cmd.Stderr = s.ErrorStream
-
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command run error: %w", err)
+		outStream = file
 	}
 
-	return nil
-}
-
-func (s *Streams) Execute(line string) error {
-	redirOpts := operator.ParseRedirect(line)
 	if redirOpts.CmdLine == "" {
 		redirOpts.CmdLine = line
 	}
+
 	args := strings.Fields(redirOpts.CmdLine)
+	if len(args) == 0 {
+		return nil
+	}
+
+	if strings.Contains(args[0], "=") {
+		environ := strings.SplitN(args[0], "=", 2)
+		os.Setenv(environ[0], environ[1])
+		return nil
+	}
 
 	var err error
 	switch args[0] {
@@ -77,58 +87,73 @@ func (s *Streams) Execute(line string) error {
 	case "cd":
 		err = command.ChangeDirectory(args)
 	case "pwd":
-		err = command.PrintWorkingDirectory(s.OutputStream)
-	// TODO echo, kill, ps
+		err = command.PrintWorkingDirectory(outStream)
+	case "echo":
+		command.Echo(outStream, args)
+	case "ps":
+		err = command.ProcessStatus(outStream)
+	case "kill":
+		err = command.Kill(args)
 	default:
-		err = s.executeExternalCommand(args, redirOpts)
+		err = command.ExecuteExternalCommand(outStream, inStream, errStream, args)
 	}
 
 	return err
 }
 
+// Execute runs a single, standalone command string using the default shell streams.
+func (s *Streams) Execute(line string) error {
+	return s.executeNode(line, s.OutputStream, s.InputStream)
+}
+
+// ExecutePipes orchestrates the concurrent execution of multiple commands
+// connected by pipelines.
 func (s *Streams) ExecutePipes(commands []string) error {
-	var cmds []*exec.Cmd
-	for _, cmdStr := range commands {
-		args := strings.Fields(cmdStr)
+	n := len(commands)
+	ins := make([]io.Reader, n)
+	outs := make([]io.Writer, n)
 
-		path, err := exec.LookPath(args[0])
-		if err != nil {
-			return fmt.Errorf("command not found: %w", err)
-		}
-		cmd := exec.Command(path, args[1:]...)
-		cmds = append(cmds, cmd)
-	}
+	ins[0] = s.InputStream
+	outs[n-1] = s.OutputStream
 
-	var pipes []*os.File
-	for i := range len(cmds) - 1 {
+	for i := range n - 1 {
 		r, w, err := os.Pipe()
 		if err != nil {
 			return fmt.Errorf("pipe error: %w", err)
 		}
-		cmds[i+1].Stdin = r
-		cmds[i].Stdout = w
-		pipes = append(pipes, r, w)
+
+		ins[i+1] = r
+		outs[i] = w
 	}
 
-	cmds[0].Stdin = s.InputStream
-	cmds[len(cmds)-1].Stdout = s.OutputStream
-	cmds[len(cmds)-1].Stderr = s.ErrorStream
+	var (
+		errs error
+		wg   sync.WaitGroup
+		mu   sync.Mutex
+	)
 
-	for _, cmd := range cmds {
-		if err := cmd.Start(); err != nil {
-			return fmt.Errorf("pipe command execution error: %w", err)
-		}
+	wg.Add(n)
+	for i, command := range commands {
+		go func(cmd string, w io.Writer, r io.Reader) {
+			defer wg.Done()
+
+			if err := s.executeNode(cmd, w, r); err != nil {
+				mu.Lock()
+				errs = errors.Join(errs, err)
+				mu.Unlock()
+			}
+
+			if closer, ok := w.(io.WriteCloser); ok && w != s.OutputStream {
+				closer.Close()
+			}
+
+			if closer, ok := r.(io.ReadCloser); ok && r != s.InputStream {
+				closer.Close()
+			}
+		}(command, outs[i], ins[i])
 	}
 
-	for i := range len(cmds) - 1 {
-		pipes[i*2+1].Close()
-	}
+	wg.Wait()
 
-	for i := len(cmds) - 1; i >= 0; i-- {
-		if err := cmds[i].Wait(); err != nil {
-			return fmt.Errorf("command wait error: %w", err)
-		}
-	}
-
-	return nil
+	return errs
 }

@@ -1,3 +1,6 @@
+// Package command implements the execution logic for the minishell's
+// built-in commands and provides a fallback mechanism for launching
+// external system binaries.
 package command
 
 import (
@@ -6,6 +9,8 @@ import (
 	"os"
 )
 
+// PrintWorkingDirectory retrieves the absolute path of the current directory
+// and writes it to the provided output stream.
 func PrintWorkingDirectory(outStream io.Writer) error {
 	currentDir, err := os.Getwd()
 	if err != nil {
