@@ -1,3 +1,4 @@
+// Package parse provides utilities for extracting data from HTML documents.
 package parse
 
 import (
@@ -5,6 +6,8 @@ import (
 	"golang.org/x/net/html/atom"
 )
 
+// ExtractHTML recursively traverses an HTML node tree and extracts URLs from relevant tags.
+// Discovered URLs are appended to the provided links slice.
 func ExtractHTML(n *html.Node, links *[]string) {
 	if n.Type == html.ElementNode {
 		switch n.DataAtom {

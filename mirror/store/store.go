@@ -1,6 +1,8 @@
+// Package store is responsible for mirroring web-sites and storing the payload to appropriate directories.
 package store
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"golang.org/x/net/html"
 )
 
+// Store holds the configuration and state for the mirroring process.
 type Store struct {
 	baseHost string
 	dirName  string
@@ -22,8 +25,12 @@ type Store struct {
 	sem     chan struct{}
 	mu      sync.Mutex
 	wg      sync.WaitGroup
+
+	allErrs error
+	errsMu  sync.Mutex
 }
 
+// NewStore creates a new instance of Store.
 func NewStore(
 	baseHost string,
 	dirName string,
@@ -46,6 +53,13 @@ func (s *Store) Wait() {
 	s.wg.Wait()
 }
 
+func (s *Store) Errors() error {
+	return s.allErrs
+}
+
+// Store processes a slice of URLs, downloading valid assets and recursively
+// traversing internal HTML pages up to the configured maximum depth.
+// It executes downloads concurrently using a semaphore to limit active connections.
 func (s *Store) Store(urls []string, currDepth int, baseURL *url.URL) error {
 	if currDepth >= s.maxDepth {
 		return nil
@@ -74,8 +88,7 @@ func (s *Store) Store(urls []string, currDepth int, baseURL *url.URL) error {
 		s.wg.Add(1)
 		s.sem <- struct{}{}
 
-		var errFromFunc error
-		go func(targetURL *url.URL, currDepth int) {
+		go func(fullURL *url.URL, currDepth int) {
 			defer s.wg.Done()
 			defer func() {
 				<-s.sem
@@ -83,7 +96,9 @@ func (s *Store) Store(urls []string, currDepth int, baseURL *url.URL) error {
 
 			dirPath := path.Join(s.dirName, path.Dir(fullURL.Path))
 			if err := os.MkdirAll(dirPath, 0750); err != nil {
-				errFromFunc = fmt.Errorf("failed to create a directory: %w", err)
+				s.errsMu.Lock()
+				s.allErrs = errors.Join(s.allErrs, fmt.Errorf("failed to create a directory: %w", err))
+				s.errsMu.Unlock()
 				return
 			}
 
@@ -93,7 +108,9 @@ func (s *Store) Store(urls []string, currDepth int, baseURL *url.URL) error {
 			}
 			filePath := path.Join(s.dirName, fullURL.Path, ext)
 			if err := download.DownloadFile(fullURL.String(), filePath); err != nil {
-				errFromFunc = err
+				s.errsMu.Lock()
+				s.allErrs = errors.Join(s.allErrs, err)
+				s.errsMu.Unlock()
 				return
 			}
 
@@ -104,31 +121,33 @@ func (s *Store) Store(urls []string, currDepth int, baseURL *url.URL) error {
 
 				file, err := os.Open(filePath)
 				if err != nil {
-					errFromFunc = fmt.Errorf("failed to open file: %w", err)
+					s.errsMu.Lock()
+					s.allErrs = errors.Join(s.allErrs, fmt.Errorf("failed to open file: %w", err))
+					s.errsMu.Unlock()
 					return
 				}
+				defer file.Close()
 
 				doc, err := html.Parse(file)
 				if err != nil {
-					errFromFunc = fmt.Errorf("failed to parse HTML file: %w", err)
+					s.errsMu.Lock()
+					s.allErrs = errors.Join(s.allErrs, fmt.Errorf("failed to parse HTML file: %w", err))
+					s.errsMu.Unlock()
 					return
 				}
-				file.Close()
 
 				var urls []string
 				parse.ExtractHTML(doc, &urls)
 
 				currDepth++
 				if err := s.Store(urls, currDepth, fullURL); err != nil {
-					errFromFunc = fmt.Errorf("failed to store a file: %w", err)
+					s.errsMu.Lock()
+					s.allErrs = errors.Join(s.allErrs, fmt.Errorf("failed to store a file: %w", err))
+					s.errsMu.Unlock()
 					return
 				}
 			}
 		}(fullURL, currDepth)
-
-		if errFromFunc != nil {
-			return err
-		}
 	}
 
 	return nil

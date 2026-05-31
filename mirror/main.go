@@ -59,6 +59,10 @@ func main() {
 	}
 
 	store.Wait()
+
+	if errs := store.Errors(); errs != nil {
+		log.Fatal(errs)
+	}
 }
 
 func stat(dirName string) error {

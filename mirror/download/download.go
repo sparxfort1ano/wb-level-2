@@ -1,3 +1,4 @@
+// Package download provides network utilities for fetching remote files.
 package download
 
 import (
@@ -8,6 +9,7 @@ import (
 	"time"
 )
 
+// DownloadFile fetches a resource from the specified URL and saves it to a local file.
 func DownloadFile(url, filename string) error {
 	client := &http.Client{
 		Timeout: 15 * time.Second,
