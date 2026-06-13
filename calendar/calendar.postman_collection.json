@@ -1,0 +1,223 @@
+{
+  "info": {
+    "_postman_id": "c4fdedf6-1849-4c90-a407-70352651f38e",
+    "name": "calendar",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "53753135"
+  },
+  "item": [
+    {
+      "name": "create_event",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "event",
+              "value": "football",
+              "type": "text",
+              "id": 0
+            },
+            {
+              "key": "date",
+              "value": "2026-06-13",
+              "type": "text",
+              "id": 1
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseurl}}/create_event",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "create_event"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "delete_event",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "urlencoded",
+          "urlencoded": [
+            {
+              "key": "id",
+              "value": "2",
+              "type": "text",
+              "id": 0
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseurl}}/delete_event",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "delete_event"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+  "name": "update_event",
+  "request": {
+    "method": "POST",
+    "header": [],
+    "body": {
+      "mode": "urlencoded",
+      "urlencoded": [
+        {
+          "key": "id",
+          "value": "1",
+          "type": "text",
+          "id": 0
+        },
+        {
+          "key": "event",
+          "value": "damn",
+          "type": "text",
+          "id": 1
+        },
+        {
+          "key": "date",
+          "value": "2026-06-12",
+          "type": "text",
+          "id": 2
+        }
+      ]
+    },
+    "url": {
+      "raw": "{{baseurl}}/update_event",
+      "host": [
+        "{{baseurl}}"
+      ],
+      "path": [
+        "update_event"
+      ]
+    }
+  },
+  "response": []
+},
+    {
+      "name": "get_events_for_day",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseurl}}/events_for_day?user_id&date=2026-06-27",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "events_for_day"
+          ],
+          "query": [
+            {
+              "key": "user_id",
+              "value": null
+            },
+            {
+              "key": "date",
+              "value": "2026-06-27"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_events_for_month",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseurl}}/events_for_month?user_id&date",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "events_for_month"
+          ],
+          "query": [
+            {
+              "key": "user_id",
+              "value": null
+            },
+            {
+              "key": "date",
+              "value": null
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_events_for_week",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseurl}}/events_for_week?user_id&date",
+          "host": [
+            "{{baseurl}}"
+          ],
+          "path": [
+            "events_for_week"
+          ],
+          "query": [
+            {
+              "key": "user_id",
+              "value": null
+            },
+            {
+              "key": "date",
+              "value": null
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+        "key": "baseurl",
+        "value": "http://localhost:5050/api/v1"
+    }
+  ]
+}
