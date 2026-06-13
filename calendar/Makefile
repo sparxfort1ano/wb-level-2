@@ -1,5 +1,8 @@
-export PROJECT_ROOT=${shell pwd}
+include .env
+export
 
+
+export PROJECT_ROOT=${shell pwd}
 
 run: 
 	@export LOGGER_FOLDER=${PROJECT_ROOT}/out/logs \
